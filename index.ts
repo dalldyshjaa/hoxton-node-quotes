@@ -62,14 +62,19 @@ app.post("/quotes", (req, res) => {
   if (typeof req.body.quote !== "string") {
     errors.push("The quote is not a string or doesn't exist");
   }
-  let newQuote = {
-    name: req.body.name,
-    age: req.body.age,
-    id: 101,
-    lastName: req.body.lastName,
-    quote: req.body.quote,
-  };
-  res.send(newQuote);
+  if (errors.length === 0) {
+    let newQuote = {
+      name: req.body.name,
+      age: req.body.age,
+      id: data[data.length - 1].id + 1,
+      lastName: req.body.lastName,
+      quote: req.body.quote,
+    };
+    data.push(newQuote);
+    res.send(newQuote);
+  } else {
+    res.status(400).send({ errors: errors });
+  }
 });
 
 app.listen(port, () => {
