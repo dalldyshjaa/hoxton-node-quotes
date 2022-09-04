@@ -10,7 +10,7 @@ type Quote = {
   quote: string;
 };
 
-const data: Quote[] = [
+let data: Quote[] = [
   {
     id: 1,
     age: 21,
@@ -74,6 +74,49 @@ app.post("/quotes", (req, res) => {
     res.send(newQuote);
   } else {
     res.status(400).send({ errors: errors });
+  }
+});
+app.delete("/quotes/:id", (req, res) => {
+  const indexToDelete = data.findIndex(
+    (quote) => quote.id === Number(req.params.id)
+  );
+
+  if (indexToDelete > -1) {
+    data = data.filter((quote) => quote.id !== Number(req.params.id));
+    res.send({ message: "Quote deleted successfully" });
+  } else {
+    res.status(404).send({ error: "Quote not found" });
+  }
+});
+app.patch("/quotes/:id", (req, res) => {
+  let match = data.find((quote) => quote.id === Number(req.params.id));
+  if (match) {
+    if (req.body.age) {
+      match.age = req.body.age;
+    }
+    if (req.body.name) {
+      match.name = req.body.name;
+    }
+    if (req.body.lastName) {
+      match.lastName = req.body.lastName;
+    }
+    if (req.body.quote) {
+      match.quote = req.body.quote;
+    }
+    res.send(match);
+  } else {
+    res.status(404).send({ error: "Not Found" });
+  }
+});
+
+app.put("/quotes/:id", (req, res) => {
+  let match = data.find((quote) => quote.id === Number(req.params.id));
+
+  if (match) {
+    match = req.body;
+    res.send(match);
+  } else {
+    res.status(404).send({ error: "Not Found" });
   }
 });
 
