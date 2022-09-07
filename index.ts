@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 const app = express();
 const port = 4000;
 
@@ -9,6 +10,13 @@ type Quote = {
   id: number;
   quote: string;
 };
+
+import Database from "better-sqlite3";
+
+const db = Database("./db/data.db", { verbose: console.log });
+
+app.use(cors());
+app.use(express.json());
 
 let data: Quote[] = [
   {
@@ -36,16 +44,44 @@ let data: Quote[] = [
   },
 ];
 
+const createQuotesTable =
+  db.prepare(`CREATE TABLE IF NOT EXISTS quotes ( id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  lastName TEXT NOT NULL,
+  age INTEGER NOT NULL, 
+  quote TEXT NOT NULL,
+  PRIMARY KEY (id));
+  `);
+
+createQuotesTable.run();
+
+const createQuote = db.prepare(
+  `INSERT INTO quotes (name, lastName, age, quote) VALUES (?, ?, ?, ?);`
+);
+
+const getAllQuotes = db.prepare(`SELECT * FROM quotes;`);
+
+const getAQuote = db.prepare(`SELECT * FROM quotes WHERE id = ?;`);
+
+const deleteQuote = db.prepare(`DELETE FROM quotes WHERE id = ?`);
+
+const updateQuote = db.prepare(
+  `UPDATE quotes  SET name = ?, lastName = ?, age = ?, quote = ? WHERE id = ?`
+);
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
 app.get("/quotes", (req, res) => {
-  res.send(data);
+  res.send(getAllQuotes.all());
 });
+
 app.get("/quotes/:id", (req, res) => {
-  const quoteMatch = data.find((quote) => quote.id === Number(req.params.id));
-  res.send(quoteMatch);
+  const quote = getAQuote.all(Number(req.params.id));
+  res.send(quote);
 });
+
 app.post("/quotes", (req, res) => {
   let errors = [];
   if (typeof req.body.age !== "number") {
@@ -63,47 +99,56 @@ app.post("/quotes", (req, res) => {
     errors.push("The quote is not a string or doesn't exist");
   }
   if (errors.length === 0) {
-    let newQuote = {
-      name: req.body.name,
-      age: req.body.age,
-      id: data[data.length - 1].id + 1,
-      lastName: req.body.lastName,
-      quote: req.body.quote,
-    };
-    data.push(newQuote);
-    res.send(newQuote);
+    createQuote.run(
+      req.body.name,
+      req.body.lastName,
+      req.body.age,
+      req.body.quote
+    );
+    res.send(req.body);
   } else {
     res.status(400).send({ errors: errors });
   }
 });
-app.delete("/quotes/:id", (req, res) => {
-  const indexToDelete = data.findIndex(
-    (quote) => quote.id === Number(req.params.id)
-  );
 
-  if (indexToDelete > -1) {
-    data = data.filter((quote) => quote.id !== Number(req.params.id));
-    res.send({ message: "Quote deleted successfully" });
-  } else {
-    res.status(404).send({ error: "Quote not found" });
-  }
+app.delete("/quotes/:id", (req, res) => {
+  deleteQuote.run(Number(req.params.id));
 });
+
 app.patch("/quotes/:id", (req, res) => {
-  let match = data.find((quote) => quote.id === Number(req.params.id));
-  if (match) {
+  let quote = getAQuote.all(Number(req.params.id))[0];
+  res.send(quote);
+  if (quote.length) {
     if (req.body.age) {
-      match.age = req.body.age;
+      //@ts-ignore
+      quote.age = req.body.age;
     }
     if (req.body.name) {
-      match.name = req.body.name;
+      //@ts-ignore
+      quote.name = req.body.name;
     }
     if (req.body.lastName) {
-      match.lastName = req.body.lastName;
+      //@ts-ignore
+      quote.lastName = req.body.lastName;
     }
     if (req.body.quote) {
-      match.quote = req.body.quote;
+      //@ts-ignore
+      quote.quote = req.body.quote;
     }
-    res.send(match);
+    //@ts-ignore
+    updateQuote.run(
+      //@ts-ignore
+      quote.name,
+      //@ts-ignore
+      quote.lastName,
+      //@ts-ignore
+      quote.age,
+      //@ts-ignore
+      quote.quote,
+      //@ts-ignore
+      quote.id
+    );
+    res.send(quote);
   } else {
     res.status(404).send({ error: "Not Found" });
   }
@@ -123,4 +168,3 @@ app.put("/quotes/:id", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
-//a
